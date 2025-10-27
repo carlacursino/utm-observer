@@ -1,2 +1,11 @@
 run-backend.sh
 interface-ec
+NOTES.md
+NOTES.pdf
+BR-UTM.png
+docker-compose.local.yml
+pyproject.toml
+uv.lock
+.nvmrc
+/.vscode
+*.egg-info
