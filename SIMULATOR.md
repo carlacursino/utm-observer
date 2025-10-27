@@ -5,8 +5,8 @@
 Em [fetch.py](backend/routes/fetch.py) modificar as linhas `285 ~ 295` para:
 
 ```python
-    # res = await flights_service.query_flights(area)
-    res.flights += generate_flight_mock_data()
+    # res = await flights_service.query_flights(area)  // ISSO VEM DA API QUE NÃO TEMOS ACESSO
+    res.flights += generate_flight_mock_data()         // ISSO VEM DO CRIADOR DE DADOS DE TESTES
     res = QueryFlightsResponse(
         flights=generate_flight_mock_data(),
         partial=False,
@@ -52,7 +52,7 @@ Uma vez gerados os dados de coordenadas e de vôo, a função `generate_flight_m
 ```python
         flight = Flight(
             id=str(uuid),                                               // vem de FLIGHT_UUIDS
-            aircraft_type=UAType.Ornithopter,
+            aircraft_type=UAType.Ornithopter,                           // influencia a tarifa
             current_state=current_state,                                // calculado logo acima
             operating_area=OperatingArea(
                 aircraft_count=1,
@@ -101,3 +101,5 @@ Com isso talvez não precisemos usar a API para obtenção de dados de vôo, com
 * Validar com João / ICEA:
     * Precisamos dos dados do *SARPAS* para poder criar uma simulação mais robusta?
     * A geração de dados de vôos garante uma simulação válida?
+* Validar com equipe:
+    * **Quais dados a simulação vai precisar para influenciar no cálculo da tarifa?**
