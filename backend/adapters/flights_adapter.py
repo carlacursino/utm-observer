@@ -143,9 +143,9 @@ class FlightsAdapter(FlightDataPort):
         try:
             response = await uss_client.request(
                 "GET",
-                "/uss/v1/flights",
+                "/uss/flights",
                 params={"view": view, "recent_positions_duration": 0},
-                scope=Authority.CONFORMANCE_MONITORING_SA,
+                scope=RIDAuthority.DISPLAY_PROVIDER,
             )
 
             if response.status_code != 200:
@@ -162,8 +162,8 @@ class FlightsAdapter(FlightDataPort):
                 try:
                     response = await uss_client.request(
                         "GET",
-                        f"/uss/v1/flights/{flight_data['id']}/details",
-                        scope=Authority.CONFORMANCE_MONITORING_SA,
+                        f"/uss/flights/{flight_data['id']}/details",
+                        scope=RIDAuthority.DISPLAY_PROVIDER,
                     )
                     if response.status_code == 200:
                         details_response = response.json()
