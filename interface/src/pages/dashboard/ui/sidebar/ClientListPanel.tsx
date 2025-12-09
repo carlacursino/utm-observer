@@ -92,7 +92,6 @@ export const ClientList = () => {
   });
 
   const toggleClient = (clientName: string) => {
-    // Placeholder for toggling client status
     const newClients = clients.map((client) => {
       if (client.name === clientName) {
         return { ...client, active: !client.active };

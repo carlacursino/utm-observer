@@ -115,14 +115,14 @@ button.cesium-infoBox-close {
   align-items: center;
   justify-content: center;
   position: absolute;
-  top: 0.5rem; /* 8px */
-  right: 0.5rem; /* 8px */
-  width: 2rem; /* 32px */
-  height: 2rem; /* 32px */
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 2rem;
+  height: 2rem;
   background: transparent;
   border: none;
   border-radius: var(--radius);
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.25rem;
   padding: 0;
   margin: 0;
   color: hsl(var(--secondary-foreground));
@@ -148,11 +148,10 @@ button.cesium-infoBox-close:hover {
 .cesium-infoBox-iframe {
   border: none;
   width: 100%;
-  height: auto; /* Adjust as needed */
-  min-height: 150px; /* Example minimum height */
+  height: auto;
+  min-height: 150px;
 }
 
-/* Customizations for the content inside the iframe */
 .cesium-infoBox-iframe body {
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));

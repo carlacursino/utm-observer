@@ -35,7 +35,7 @@ export interface Authority {
   email?: TextShortType;
   phone?: TextShortType;
   purpose?: CodeAuthorityRole;
-  interval_before?: string; // ISO 8601 duration
+  interval_before?: string;
 }
 
 export interface GeoZone {

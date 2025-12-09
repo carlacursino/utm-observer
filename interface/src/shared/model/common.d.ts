@@ -8,7 +8,7 @@ export type URL = string;
 export type Version = string;
 
 export interface Time {
-  value: string; // RFC3339-formatted time/date string
+  value: string;
   format: "RFC3339";
 }
 

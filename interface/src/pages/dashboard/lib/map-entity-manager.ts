@@ -1,8 +1,6 @@
 import { Cartesian3 } from "cesium";
 import * as Cesium from "cesium";
-import {
-  OperationalIntentStateColor,
-} from "@/shared/model";
+import { OperationalIntentStateColor } from "@/shared/model";
 import type {
   OperationalIntent,
   Constraint,
@@ -108,7 +106,6 @@ export class MapEntityManager {
   displayFlights(newFlights: Array<Flight>) {
     const newFlightIds = new Set(newFlights.map((flight) => flight.id));
 
-    // Remove flights that are no longer in the newFlights array
     Object.keys(this.flights).forEach((flightId) => {
       if (!newFlightIds.has(flightId)) {
         this.flights[flightId].forEach((entity) => {
@@ -118,9 +115,7 @@ export class MapEntityManager {
       }
     });
 
-    // For each entity in the flights set. Remove it and add the new flights
     newFlights.forEach((newFlight) => {
-      // TODO: If flight stop displaying. What happens?
       const { current_state, id } = newFlight;
       const { position, operational_status } = current_state;
 
@@ -171,9 +166,8 @@ export class MapEntityManager {
             position.alt,
             Cesium.Ellipsoid.WGS84,
           ),
-          // Replace point with sphere
           ellipsoid: {
-            radii: new Cesium.Cartesian3(5, 5, 5), // Adjust radius as needed
+            radii: new Cesium.Cartesian3(5, 5, 5),
             material: Cesium.Color.BLACK.withAlpha(0.8),
           },
         });
@@ -210,7 +204,6 @@ export class MapEntityManager {
       Constraint | OperationalIntent | IdentificationServiceAreaFull
     >,
   ) {
-    // TODO: Verify if this is really needed
     if (
       this.viewer.entities.values.length !==
       sum(
@@ -224,7 +217,6 @@ export class MapEntityManager {
       this.displayedEntities = {};
     }
 
-    // Clearning RegionIds that are not in regions
     Object.keys(this.displayedEntities).forEach((regionId) => {
       if (!regions.some((region) => region.reference.id === regionId)) {
         this.displayedEntities[regionId].entityIds.forEach((entityId) => {

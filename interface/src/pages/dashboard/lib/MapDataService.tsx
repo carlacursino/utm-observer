@@ -46,7 +46,6 @@ export interface TimeRange {
 export const MapDataService = () => {
   const controller = useRef<MapEntityManager | null>(null);
 
-  // This was created because of caching problems in the map provider context
   const localVolumes = useRef<
     Array<OperationalIntent | Constraint | IdentificationServiceAreaFull>
   >([]);
@@ -203,7 +202,6 @@ export const MapDataService = () => {
         return false;
       }
 
-      // Verify filters
       if (filters.length > 0) {
         const filterIds = filters.filter((f) => f.enabled).map((f) => f.id);
         if (
@@ -224,7 +222,6 @@ export const MapDataService = () => {
         return false;
       }
 
-      // Verify timeline intersection
       if (!isLive) {
         const { startTime } = getTimeRange();
         const selectedTime = addMinutes(startTime, minutesOffset);
@@ -317,13 +314,11 @@ export const MapDataService = () => {
 
     timeRange.current = getTimeRange();
 
-    // Reset the live interval if the time range changes
     if (constantVolumeFetch.current) {
       clearInterval(constantVolumeFetch.current);
       liveInterval.current = null;
     }
 
-    // Update the controller with the new time range
     constantVolumeFetch.current = setInterval(() => {
       triggerFetchVolumes();
     }, VOLUME_FETCH_INTERVAL);
@@ -338,7 +333,6 @@ export const MapDataService = () => {
 
   const getFilteredFlights = (flights: Array<Flight>): Array<Flight> => {
     return flights.filter((flight) => {
-      // Filter by selected providers
       if (
         !flightProvidersFilter.includes(
           flight.identification_service_area.owner,
@@ -347,7 +341,6 @@ export const MapDataService = () => {
         return false;
       }
 
-      // Filter by selected flights
       if (!flightsFilter.includes(flight.id)) {
         return false;
       }
@@ -386,7 +379,6 @@ export const MapDataService = () => {
       }, FLIGHT_FETCH_INTERVAL);
     } else {
       if (liveInterval.current) {
-        // Clear the interval if it exists
         controller.current.clearFlights();
         clearInterval(liveInterval.current);
         liveInterval.current = null;
@@ -395,7 +387,6 @@ export const MapDataService = () => {
     }
   };
 
-  // Object state on the dynamic input
   useEffect(onViewerStart, [viewer]);
   useEffect(onTimeRangeChange, [startDate, startTime, endDate, endTime]);
   useEffect(onInterfaceUpdate, [

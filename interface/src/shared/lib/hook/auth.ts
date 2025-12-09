@@ -5,7 +5,6 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user has a valid token on component mount
     const token = sessionStorage.getItem("accessToken");
     setIsAuthenticated(!!token);
     setIsLoading(false);

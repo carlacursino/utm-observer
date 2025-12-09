@@ -2,7 +2,15 @@ import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ROUTES } from "@/shared/config";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui";
+import {
+  Button,
+  Input,
+  Label,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/ui";
 import LogoBRUTM from "@/shared/assets/logo.svg";
 import { useToast, useAuth } from "@/shared/lib/hook";
 
@@ -17,7 +25,6 @@ export const LoginPage = () => {
   const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
 
   const generateJWT = () => {
-    // Generate a simple fake JWT token
     const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
     const payload = btoa(
       JSON.stringify({
@@ -31,7 +38,6 @@ export const LoginPage = () => {
   };
 
   const verifyCredentials = (username: string, password: string): boolean => {
-    // Simulate credential verification
     const credentials = `${username}:${password}`;
     return credentials === import.meta.env.VITE_CREDENTIALS;
   };
@@ -40,7 +46,6 @@ export const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login delay
     setTimeout(() => {
       if (verifyCredentials(username, password)) {
         const token = generateJWT();

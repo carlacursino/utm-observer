@@ -1,15 +1,11 @@
 import { format } from "date-fns";
-import type { Constraint, OperationalIntentStateColor, OperationalIntent, Volume4D } from "@/shared/model";
-/**
- * Format a timestamp for display
- */
+import type { Constraint, OperationalIntent, Volume4D } from "@/shared/model";
+import { OperationalIntentStateColor } from "@/shared/model";
+
 const formatTimestamp = (timestamp: string): string => {
   return format(new Date(timestamp), "dd/MM/yyyy HH:mm:ss");
 };
 
-/**
- * Create HTML for volume information
- */
 const getVolumeDetailsHtml = (volumes: Volume4D[] | undefined): string => {
   if (!volumes || volumes.length === 0)
     return "<span class='no-data'>No volumes defined</span>";
@@ -49,9 +45,6 @@ const getVolumeDetailsHtml = (volumes: Volume4D[] | undefined): string => {
   `;
 };
 
-/**
- * Format detailed HTML information about a constraint
- */
 export const formatConstraintDetails = (constraint: Constraint): string => {
   const { reference, details } = constraint;
 
@@ -87,9 +80,6 @@ export const formatConstraintDetails = (constraint: Constraint): string => {
   `;
 };
 
-/**
- * Format detailed HTML information about an operational intent
- */
 export const formatOperationalIntentDetails = (
   intent: OperationalIntent,
 ): string => {
@@ -132,9 +122,6 @@ export const formatOperationalIntentDetails = (
   `;
 };
 
-/**
- * Format entity details based on type (constraint or operational intent)
- */
 export const formatEntityDetails = (
   entity: Constraint | OperationalIntent,
 ): string => {
