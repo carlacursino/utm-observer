@@ -1,4 +1,3 @@
-import { Cartesian3 } from "cesium";
 import * as Cesium from "cesium";
 import { OperationalIntentStateColor } from "@/shared/model";
 import type {
@@ -6,7 +5,6 @@ import type {
   Constraint,
   IdentificationServiceAreaFull,
   Flight,
-  Rectangle,
   Volume3D,
   Volume4D,
 } from "@/shared/model";
@@ -20,9 +18,7 @@ function sum(arr: number[]): number {
   return arr.reduce((acc, val) => acc + val, 0);
 }
 
-function radiansToDegrees(radians: number): number {
-  return radians * (180 / Math.PI);
-}
+
 
 type RegionId = string;
 type RegionOvn = string;
@@ -43,33 +39,11 @@ export class MapEntityManager {
 
     this.viewer.cesiumWidget.creditContainer.remove();
 
-    navigator.geolocation.getCurrentPosition(
-      (position: GeolocationPosition) => {
-        const { latitude, longitude, altitude } = position.coords;
-
-        const cameraAltitude = altitude ? altitude + 1000 : 2000;
-
-        this.viewer.camera.setView({
-          destination: Cartesian3.fromDegrees(
-            longitude,
-            latitude,
-            cameraAltitude,
-          ),
-          orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-45),
-            roll: 0,
-          },
-        });
-      },
-    );
+    this.viewer.cesiumWidget.creditContainer.remove();
 
     this.handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
   }
 
-  addMoveEndCallback(callback: () => void) {
-    this.viewer.camera.moveEnd.addEventListener(callback);
-  }
 
   addEntityClickCallback(
     callback: (entity: Cesium.Entity, regionId: RegionId) => void,
@@ -117,7 +91,7 @@ export class MapEntityManager {
 
     newFlights.forEach((newFlight) => {
       const { current_state, id } = newFlight;
-      const { position, operational_status } = current_state;
+      const { position } = current_state;
 
       if (!position || !position.lat || !position.lng) {
         return;
@@ -125,20 +99,24 @@ export class MapEntityManager {
 
       if (this.flights[id]) {
         const entity = this.flights[id][0];
-        entity.position = Cesium.Cartesian3.fromDegrees(
-          position.lng,
-          position.lat,
-          position.alt,
-          Cesium.Ellipsoid.WGS84,
+        entity.position = new Cesium.ConstantPositionProperty(
+          Cesium.Cartesian3.fromDegrees(
+            position.lng,
+            position.lat,
+            position.alt,
+            Cesium.Ellipsoid.WGS84,
+          ),
         );
 
         if (this.flights[id].length > 1) {
           const label = this.flights[id][1];
-          label.position = Cesium.Cartesian3.fromDegrees(
-            position.lng,
-            position.lat,
-            position.alt + 10,
-            Cesium.Ellipsoid.WGS84,
+          label.position = new Cesium.ConstantPositionProperty(
+            Cesium.Cartesian3.fromDegrees(
+              position.lng,
+              position.lat,
+              position.alt + 10,
+              Cesium.Ellipsoid.WGS84,
+            ),
           );
         }
       } else {
@@ -228,7 +206,7 @@ export class MapEntityManager {
 
     regions.forEach((region) => {
       const { reference, details } = region;
-      const { volumes }: { volumes: Volume4D[] } = details;
+      const volumes = (details as any).volumes as Volume4D[];
 
       if (!volumes || volumes.length === 0) {
         return;
@@ -268,7 +246,7 @@ export class MapEntityManager {
       for (const volume of volumes) {
         let color: Cesium.Color = Cesium.Color.GREY;
         if (isOperationalIntent(region)) {
-          color = OperationalIntentStateColor[reference["state"]];
+          color = OperationalIntentStateColor[(reference as any)["state"]];
         } else if (isConstraint(region)) {
           color = Cesium.Color.RED;
         } else if (isIdentificationServiceArea(region)) {
@@ -298,22 +276,6 @@ export class MapEntityManager {
     });
   }
 
-  getViewRectangle = (): Rectangle | undefined => {
-    const rect = this.viewer.camera.computeViewRectangle();
-
-    if (!rect) {
-      return;
-    }
-
-    const ret: Rectangle = {
-      north: radiansToDegrees(rect.north),
-      east: radiansToDegrees(rect.east),
-      south: radiansToDegrees(rect.south),
-      west: radiansToDegrees(rect.west),
-    };
-
-    return ret;
-  };
 
   private drawCylinder(
     volume: Volume3D,
@@ -351,7 +313,7 @@ export class MapEntityManager {
     volume: Volume3D,
     color: Cesium.Color = Cesium.Color.GREY,
   ): Cesium.Entity | undefined {
-    if (!("outline_polygon" in volume)) {
+    if (!("outline_polygon" in volume) || !volume.outline_polygon) {
       return;
     }
 

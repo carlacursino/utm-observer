@@ -45,6 +45,8 @@ export interface IMapContext {
   setFlightsFilter: (flights: string[]) => void;
   flightProvidersFilter: string[];
   setFlightProvidersFilter: (flights: string[]) => void;
+  is3D: boolean;
+  setIs3D: (is3D: boolean) => void;
 }
 
 export const MapContext = createContext<IMapContext | undefined>(undefined);

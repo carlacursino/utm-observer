@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { format } from "date-fns";
 import { MapState } from "@/shared/model";
 import type {
@@ -48,7 +48,14 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
   const [managerFilter, setManagerFilter] = useState<string[]>([]);
   const [mapState, setMapState] = useState<MapState>(MapState.ONLINE);
 
-  const [isLive, setIsLive] = useState<boolean>(false);
+  const [isLive, setIsLive] = useState<boolean>(() => {
+    const saved = localStorage.getItem("map-is-live");
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("map-is-live", JSON.stringify(isLive));
+  }, [isLive]);
 
   const [flights, setFlights] = useState<Flight[]>([]);
 
@@ -56,6 +63,14 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
   const [flightProvidersFilter, setFlightProvidersFilter] = useState<string[]>(
     [],
   );
+  const [is3D, setIs3D] = useState<boolean>(() => {
+    const saved = localStorage.getItem("map-is-3d");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("map-is-3d", JSON.stringify(is3D));
+  }, [is3D]);
 
   return (
     <MapContext.Provider
@@ -90,6 +105,8 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
         setFlightsFilter,
         flightProvidersFilter,
         setFlightProvidersFilter,
+        is3D,
+        setIs3D,
       }}
     >
       {children}
