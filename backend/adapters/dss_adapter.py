@@ -26,8 +26,6 @@ from config.config import Settings
 
 
 class DSSAdapter(AirspaceReferencesDataPort):
-    """Adapter for DSS - contains all infrastructure logic"""
-
     def __init__(self):
         settings = Settings()
         self.client = AuthClient(
@@ -35,7 +33,6 @@ class DSSAdapter(AirspaceReferencesDataPort):
             aud=settings.DSS_AUDIENCE,
         )
 
-        # Simple caching to handle DSS errors
         self._last_constraints = []
         self._last_operational_intents = []
         self._last_isas = []
@@ -43,7 +40,6 @@ class DSSAdapter(AirspaceReferencesDataPort):
     async def get_constraint_references(
         self, area: Volume4D
     ) -> List[ConstraintReference]:
-        """Get constraint references from DSS - direct implementation"""
         try:
             params = QueryConstraintReferenceParameters(area_of_interest=area)
 
@@ -72,7 +68,6 @@ class DSSAdapter(AirspaceReferencesDataPort):
     async def get_operational_intent_references(
         self, area: Volume4D
     ) -> List[OperationalIntentReference]:
-        """Get operational intent references from DSS - direct implementation"""
         try:
             params = QueryOperationalIntentReferenceParameters(
                 area_of_interest=area
@@ -108,7 +103,6 @@ class DSSAdapter(AirspaceReferencesDataPort):
     async def get_identification_service_areas(
         self, area: Volume4D
     ) -> List[IdentificationServiceArea]:
-        """Get identification service areas from DSS - direct implementation"""
         try:
             if not hasattr(area.volume, "outline_polygon"):
                 return []
