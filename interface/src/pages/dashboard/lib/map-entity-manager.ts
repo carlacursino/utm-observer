@@ -14,13 +14,14 @@ import {
   isIdentificationServiceArea,
   isOperationalIntent,
   isUTMZone,
+  getVolumeId,
+  getVolumeOvn,
+  getVolumeVolumes,
 } from "@/shared/lib";
 
 function sum(arr: number[]): number {
   return arr.reduce((acc, val) => acc + val, 0);
 }
-
-
 
 type RegionId = string;
 type RegionOvn = string;
@@ -45,7 +46,6 @@ export class MapEntityManager {
 
     this.handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
   }
-
 
   addEntityClickCallback(
     callback: (entity: Cesium.Entity, regionId: RegionId) => void,
@@ -201,8 +201,7 @@ export class MapEntityManager {
       if (
         !regions.some(
           (region) =>
-            (isUTMZone(region) ? region.name : region.reference.id) ===
-            regionId,
+            (isUTMZone(region) ? region.id : region.reference.id) === regionId,
         )
       ) {
         this.displayedEntities[regionId].entityIds.forEach((entityId) => {
@@ -213,22 +212,12 @@ export class MapEntityManager {
     });
 
     regions.forEach((region) => {
-      let volumes: Volume4D[] = [];
-      let regionId = "";
-      let ovn = "";
+      let volumes = getVolumeVolumes(region);
+      let regionId = getVolumeId(region);
+      let ovn = getVolumeOvn(region);
 
-      if (isUTMZone(region)) {
-        volumes = region.volumes;
-        regionId = region.name;
-        ovn = ""; // UTM Zones don't have OVN for now
-      } else {
-        const { reference, details } = region;
-        volumes = (details as any).volumes as Volume4D[];
-        if (!("id" in reference)) {
-          return;
-        }
-        regionId = reference.id;
-        ovn = "ovn" in reference ? reference!.ovn : "";
+      if (!regionId) {
+        return;
       }
 
       if (!volumes || volumes.length === 0) {
@@ -263,7 +252,8 @@ export class MapEntityManager {
       for (const volume of volumes) {
         let color: Cesium.Color = Cesium.Color.GREY;
         if (isOperationalIntent(region)) {
-          color = OperationalIntentStateColor[(region.reference as any)["state"]];
+          color =
+            OperationalIntentStateColor[(region.reference as any)["state"]];
         } else if (isConstraint(region)) {
           color = Cesium.Color.RED;
         } else if (isIdentificationServiceArea(region)) {
@@ -294,7 +284,6 @@ export class MapEntityManager {
       }
     });
   }
-
 
   private drawCylinder(
     volume: Volume3D,

@@ -16,6 +16,7 @@ import {
   isIdentificationServiceArea,
   isOperationalIntent,
   isUTMZone,
+  getVolumeManager,
 } from "@/shared/lib";
 
 interface Client {
@@ -25,20 +26,6 @@ interface Client {
   constraints: number;
   identificationServiceAreas: number;
   utm_zones: number;
-}
-
-function getClientName(
-  volume:
-    | OperationalIntent
-    | Constraint
-    | UTMZone
-    | IdentificationServiceAreaFull,
-): string | null {
-  if (isIdentificationServiceArea(volume)) return volume.reference.owner;
-  if (isOperationalIntent(volume)) return volume.reference.manager;
-  if (isConstraint(volume)) return volume.reference.manager;
-  if (isUTMZone(volume)) return volume.manager;
-  return null;
 }
 
 export const ClientList = () => {
@@ -66,7 +53,7 @@ export const ClientList = () => {
     });
 
     volumes.forEach((volume) => {
-      const clientName = getClientName(volume);
+      const clientName = getVolumeManager(volume);
 
       if (clientName) {
         if (!currentClients[clientName]) {

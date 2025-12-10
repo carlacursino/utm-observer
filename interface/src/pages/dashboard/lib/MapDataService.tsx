@@ -23,6 +23,9 @@ import {
   isConstraint,
   isIdentificationServiceArea,
   isUTMZone,
+  getVolumeManager,
+  getVolumeId,
+  getVolumeTitle,
 } from "@/shared/lib";
 
 const VOLUME_FETCH_INTERVAL = 10000;
@@ -31,20 +34,6 @@ const FLIGHT_FETCH_INTERVAL = 10000;
 export interface TimeRange {
   startTime: Date;
   endTime: Date;
-}
-
-function getManager(
-  volume:
-    | OperationalIntent
-    | Constraint
-    | UTMZone
-    | IdentificationServiceAreaFull,
-): string | null {
-  if (isIdentificationServiceArea(volume)) return volume.reference.owner;
-  if (isOperationalIntent(volume)) return volume.reference.manager;
-  if (isConstraint(volume)) return volume.reference.manager;
-  if (isUTMZone(volume)) return volume.manager;
-  return null;
 }
 
 export const MapDataService = () => {
@@ -228,7 +217,7 @@ export const MapDataService = () => {
         }
       }
 
-      const manager = getManager(region);
+      const manager = getVolumeManager(region);
 
       if (manager && !managerFilter.includes(manager)) {
         return false;
@@ -306,11 +295,24 @@ export const MapDataService = () => {
     controller.current.addEntityClickCallback(
       (pickedEntity: any, regionId: string) => {
         const volume = localVolumes.current.find(
-          (v) => !isUTMZone(v) && v.reference.id === regionId,
+          (v) => getVolumeId(v) === regionId,
         );
 
         if (volume) {
           pickedEntity.description = formatEntityDetails(volume as any);
+
+          // Yes, this is a hacky way to set the title of the info box
+          setTimeout(() => {
+            const q = document.querySelector(".cesium-infoBox-title");
+            if (q)
+              q.textContent = getVolumeTitle(
+                volume as
+                | Constraint
+                | OperationalIntent
+                | IdentificationServiceAreaFull
+                | UTMZone,
+              );
+          }, 1);
         }
       },
     );

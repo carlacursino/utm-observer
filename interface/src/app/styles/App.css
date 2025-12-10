@@ -76,7 +76,7 @@
 
 .cesium-infoBox-title {
   display: block;
-  padding: 0.75rem 2.5rem; /* 12px 40px */
+  padding: 0.75rem 2.5rem;
   height: 3rem;
   background: hsl(var(--secondary));
   border-top-left-radius: var(--radius);
@@ -86,6 +86,7 @@
   white-space: nowrap;
   overflow: hidden;
   box-sizing: border-box;
+  content: "";
 }
 
 .cesium-infoBox-bodyless .cesium-infoBox-title {
@@ -95,10 +96,10 @@
 button.cesium-infoBox-camera {
   display: none !important;
   position: absolute;
-  top: 0.5rem; /* 8px */
-  left: 0.5rem; /* 8px */
-  width: 2rem; /* 32px */
-  height: 2rem; /* 32px */
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 2rem;
+  height: 2rem;
   background: transparent;
   border: none;
   border-radius: var(--radius);

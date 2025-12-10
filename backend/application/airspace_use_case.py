@@ -186,6 +186,7 @@ class AirspaceQueryUseCase:
                 max_alt = props.get("maxAltitude", 1000)
                 name = props.get("name", "Unknown Zone")
                 manager = props.get("manager", "Unknown Manager")
+                zone_id = props.get("id", "unknown-id")
 
                 # Create Volume3D
                 volume_3d = Volume3D(
@@ -213,6 +214,7 @@ class AirspaceQueryUseCase:
 
                 utm_zones.append(
                     UTMZone(
+                        id=zone_id,
                         name=name,
                         manager=manager,
                         volumes=[volume_4d],
