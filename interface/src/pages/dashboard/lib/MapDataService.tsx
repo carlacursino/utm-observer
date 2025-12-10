@@ -9,6 +9,7 @@ import type {
   Rectangle,
   Volume4D,
   Flight,
+  UTMZone,
 } from "@/shared/model";
 import { MapState } from "@/shared/model";
 import { MapEntityManager } from "./map-entity-manager";
@@ -17,31 +18,33 @@ import { useMap } from "@/shared/lib/map";
 import { FlightsService, AllocationsService } from "@/shared/api";
 import { toast } from "@/shared/lib/hook";
 import { formatEntityDetails } from "@/shared/lib/formatters";
+import {
+  isOperationalIntent,
+  isConstraint,
+  isIdentificationServiceArea,
+  isUTMZone,
+} from "@/shared/lib";
 
 const VOLUME_FETCH_INTERVAL = 10000;
 const FLIGHT_FETCH_INTERVAL = 10000;
 
-export const isOperationalIntent = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
-): region is OperationalIntent => {
-  return "flight_type" in region.reference;
-};
-
-export const isConstraint = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
-): region is Constraint => {
-  return "geozone" in region.details;
-};
-
-export const isIdentificationServiceArea = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
-): region is IdentificationServiceAreaFull => {
-  return "owner" in region.reference;
-};
-
 export interface TimeRange {
   startTime: Date;
   endTime: Date;
+}
+
+function getManager(
+  volume:
+    | OperationalIntent
+    | Constraint
+    | UTMZone
+    | IdentificationServiceAreaFull,
+): string | null {
+  if (isIdentificationServiceArea(volume)) return volume.reference.owner;
+  if (isOperationalIntent(volume)) return volume.reference.manager;
+  if (isConstraint(volume)) return volume.reference.manager;
+  if (isUTMZone(volume)) return volume.manager;
+  return null;
 }
 
 export const MapDataService = () => {
@@ -49,7 +52,9 @@ export const MapDataService = () => {
   const cameraManager = useRef<MapCameraManager | null>(null);
 
   const localVolumes = useRef<
-    Array<OperationalIntent | Constraint | IdentificationServiceAreaFull>
+    Array<
+      OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
+    >
   >([]);
 
   const liveInterval = useRef<NodeJS.Timeout | null>(null);
@@ -164,11 +169,12 @@ export const MapDataService = () => {
       const res = await AllocationsService.query(boundingVolume);
 
       const fetchedVolumes: Array<
-        OperationalIntent | Constraint | IdentificationServiceAreaFull
+        OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
       > = [
           ...res.constraints,
           ...res.operational_intents,
           ...res.identification_service_areas,
+          ...res.utm_zones,
         ];
 
       localVolumes.current = fetchedVolumes.slice();
@@ -194,12 +200,15 @@ export const MapDataService = () => {
 
   const getFilteredRegions = (
     regions: Array<
-      OperationalIntent | Constraint | IdentificationServiceAreaFull
+      OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
     >,
-  ): Array<OperationalIntent | Constraint | IdentificationServiceAreaFull> => {
+  ): Array<
+    OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
+  > => {
     const minutesOffset = selectedMinutes[0] || 0;
     return regions.filter((region) => {
-      const volumes = region.details.volumes;
+      const volumes =
+        "details" in region ? region.details.volumes : region.volumes;
 
       if (!volumes) {
         return false;
@@ -212,16 +221,16 @@ export const MapDataService = () => {
             !filterIds.includes("operational-intents")) ||
           (isConstraint(region) && !filterIds.includes("constraints")) ||
           (isIdentificationServiceArea(region) &&
-            !filterIds.includes("identification-service-areas"))
+            !filterIds.includes("identification-service-areas")) ||
+          (isUTMZone(region) && !filterIds.includes("utm-zones"))
         ) {
           return false;
         }
       }
 
-      const manager = isIdentificationServiceArea(region)
-        ? region.reference.owner
-        : region.reference.manager;
-      if (!managerFilter.includes(manager)) {
+      const manager = getManager(region);
+
+      if (manager && !managerFilter.includes(manager)) {
         return false;
       }
 
@@ -297,7 +306,7 @@ export const MapDataService = () => {
     controller.current.addEntityClickCallback(
       (pickedEntity: any, regionId: string) => {
         const volume = localVolumes.current.find(
-          (v) => v.reference.id === regionId,
+          (v) => !isUTMZone(v) && v.reference.id === regionId,
         );
 
         if (volume) {

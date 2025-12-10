@@ -4,10 +4,18 @@ import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { Users } from "lucide-react";
 import { useMap } from "@/shared/lib/map";
+import type {
+  Constraint,
+  IdentificationServiceAreaFull,
+  OperationalIntent,
+  Flight,
+  UTMZone,
+} from "@/shared/model";
 import {
   isConstraint,
   isIdentificationServiceArea,
   isOperationalIntent,
+  isUTMZone,
 } from "@/shared/lib";
 
 interface Client {
@@ -16,6 +24,21 @@ interface Client {
   operationalIntents: number;
   constraints: number;
   identificationServiceAreas: number;
+  utm_zones: number;
+}
+
+function getClientName(
+  volume:
+    | OperationalIntent
+    | Constraint
+    | UTMZone
+    | IdentificationServiceAreaFull,
+): string | null {
+  if (isIdentificationServiceArea(volume)) return volume.reference.owner;
+  if (isOperationalIntent(volume)) return volume.reference.manager;
+  if (isConstraint(volume)) return volume.reference.manager;
+  if (isUTMZone(volume)) return volume.manager;
+  return null;
 }
 
 export const ClientList = () => {
@@ -38,13 +61,12 @@ export const ClientList = () => {
         operationalIntents: 0,
         constraints: 0,
         identificationServiceAreas: 0,
+        utm_zones: 0,
       };
     });
 
     volumes.forEach((volume) => {
-      const clientName = isIdentificationServiceArea(volume)
-        ? volume.reference.owner
-        : volume.reference.manager;
+      const clientName = getClientName(volume);
 
       if (clientName) {
         if (!currentClients[clientName]) {
@@ -54,6 +76,7 @@ export const ClientList = () => {
             operationalIntents: 0,
             constraints: 0,
             identificationServiceAreas: 0,
+            utm_zones: 0,
           };
         }
 
@@ -63,6 +86,8 @@ export const ClientList = () => {
           currentClients[clientName].constraints += 1;
         } else if (isIdentificationServiceArea(volume)) {
           currentClients[clientName].identificationServiceAreas += 1;
+        } else if (isUTMZone(volume)) {
+          currentClients[clientName].utm_zones += 1;
         }
       }
     });
@@ -71,7 +96,8 @@ export const ClientList = () => {
       (client) =>
         client.operationalIntents > 0 ||
         client.constraints > 0 ||
-        client.identificationServiceAreas > 0,
+        client.identificationServiceAreas > 0 ||
+        client.utm_zones > 0,
     );
 
     setClients(newClients);
@@ -197,6 +223,11 @@ export const ClientList = () => {
                 Identification Service Areas:{" "}
                 {client.identificationServiceAreas}
               </div>
+              {client.utm_zones > 0 && (
+                <div className="text-xs text-gray-400 text-start">
+                  UTM Zones: {client.utm_zones}
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -44,6 +44,11 @@ export const MapProvider = ({ children }: { children: ReactNode }) => {
       label: "Identification Service Areas",
       enabled: false,
     },
+    {
+      id: "utm-zones",
+      label: "UTM Zones",
+      enabled: true,
+    },
   ]);
   const [managerFilter, setManagerFilter] = useState<string[]>([]);
   const [mapState, setMapState] = useState<MapState>(MapState.ONLINE);

@@ -184,7 +184,10 @@ class AirspaceQueryUseCase:
 
                 min_alt = props.get("minAltitude", 0)
                 max_alt = props.get("maxAltitude", 1000)
+                name = props.get("name", "Unknown Zone")
+                manager = props.get("manager", "Unknown Manager")
 
+                # Create Volume3D
                 volume_3d = Volume3D(
                     outline_polygon=Polygon(vertices=vertices),
                     altitude_lower=Altitude(
@@ -199,6 +202,7 @@ class AirspaceQueryUseCase:
                     ),
                 )
 
+                # Create Volume4D (assume always active for now)
                 volume_4d = Volume4D(
                     volume=volume_3d,
                     time_start=Time(value=datetime.now()),
@@ -209,7 +213,8 @@ class AirspaceQueryUseCase:
 
                 utm_zones.append(
                     UTMZone(
-                        name="IEAV Zone",
+                        name=name,
+                        manager=manager,
                         volumes=[volume_4d],
                     )
                 )

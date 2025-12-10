@@ -7,11 +7,13 @@ import type {
   Flight,
   Volume3D,
   Volume4D,
+  UTMZone,
 } from "@/shared/model";
 import {
   isConstraint,
   isIdentificationServiceArea,
   isOperationalIntent,
+  isUTMZone,
 } from "@/shared/lib";
 
 function sum(arr: number[]): number {
@@ -179,7 +181,7 @@ export class MapEntityManager {
 
   displayRegions(
     regions: Array<
-      Constraint | OperationalIntent | IdentificationServiceAreaFull
+      Constraint | OperationalIntent | IdentificationServiceAreaFull | UTMZone
     >,
   ) {
     if (
@@ -196,7 +198,13 @@ export class MapEntityManager {
     }
 
     Object.keys(this.displayedEntities).forEach((regionId) => {
-      if (!regions.some((region) => region.reference.id === regionId)) {
+      if (
+        !regions.some(
+          (region) =>
+            (isUTMZone(region) ? region.name : region.reference.id) ===
+            regionId,
+        )
+      ) {
         this.displayedEntities[regionId].entityIds.forEach((entityId) => {
           this.viewer.entities.removeById(entityId);
         });
@@ -205,52 +213,63 @@ export class MapEntityManager {
     });
 
     regions.forEach((region) => {
-      const { reference, details } = region;
-      const volumes = (details as any).volumes as Volume4D[];
+      let volumes: Volume4D[] = [];
+      let regionId = "";
+      let ovn = "";
+
+      if (isUTMZone(region)) {
+        volumes = region.volumes;
+        regionId = region.name;
+        ovn = ""; // UTM Zones don't have OVN for now
+      } else {
+        const { reference, details } = region;
+        volumes = (details as any).volumes as Volume4D[];
+        if (!("id" in reference)) {
+          return;
+        }
+        regionId = reference.id;
+        ovn = "ovn" in reference ? reference!.ovn : "";
+      }
 
       if (!volumes || volumes.length === 0) {
         return;
       }
 
-      if (!("id" in reference)) {
-        return;
-      }
-
-      const ovn = "ovn" in reference ? reference!.ovn : "";
-
       if (
-        reference.id in this.displayedEntities &&
-        this.displayedEntities[reference.id].ovn === ovn
+        regionId in this.displayedEntities &&
+        this.displayedEntities[regionId].ovn === ovn
       ) {
         return;
       }
 
-      if (!(reference.id in this.displayedEntities)) {
-        this.displayedEntities[reference.id] = {
+      if (!(regionId in this.displayedEntities)) {
+        this.displayedEntities[regionId] = {
           ovn: ovn!,
           entityIds: [],
         };
       }
 
       if (
-        reference.id in this.displayedEntities &&
-        this.displayedEntities[reference.id].ovn !== ovn
+        regionId in this.displayedEntities &&
+        this.displayedEntities[regionId].ovn !== ovn
       ) {
-        this.displayedEntities[reference.id].entityIds.forEach((entityId) => {
+        this.displayedEntities[regionId].entityIds.forEach((entityId) => {
           this.viewer.entities.removeById(entityId);
         });
-        this.displayedEntities[reference.id].entityIds = [];
-        this.displayedEntities[reference.id].ovn = ovn!;
+        this.displayedEntities[regionId].entityIds = [];
+        this.displayedEntities[regionId].ovn = ovn!;
       }
 
       for (const volume of volumes) {
         let color: Cesium.Color = Cesium.Color.GREY;
         if (isOperationalIntent(region)) {
-          color = OperationalIntentStateColor[(reference as any)["state"]];
+          color = OperationalIntentStateColor[(region.reference as any)["state"]];
         } else if (isConstraint(region)) {
           color = Cesium.Color.RED;
         } else if (isIdentificationServiceArea(region)) {
           color = Cesium.Color.BLUE;
+        } else if (isUTMZone(region)) {
+          color = Cesium.Color.fromCssColorString("#E6E6FA").withAlpha(0.8);
         }
 
         if (
@@ -260,7 +279,7 @@ export class MapEntityManager {
           const entity = this.drawCylinder(volume.volume, color);
 
           if (entity) {
-            this.displayedEntities[reference.id].entityIds.push(entity.id);
+            this.displayedEntities[regionId].entityIds.push(entity.id);
           }
         } else if (
           "outline_polygon" in volume.volume &&
@@ -269,7 +288,7 @@ export class MapEntityManager {
           const entity = this.drawPolygon(volume.volume, color);
 
           if (entity) {
-            this.displayedEntities[reference.id].entityIds.push(entity.id);
+            this.displayedEntities[regionId].entityIds.push(entity.id);
           }
         }
       }

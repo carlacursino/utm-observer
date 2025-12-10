@@ -16,4 +16,5 @@ export interface QueryAllocationsResponse {
   operational_intents: OperationalIntent[];
   constraints: Constraint[];
   identification_service_areas: IdentificationServiceAreaFull[];
+  utm_zones: UTMZone[];
 }

@@ -16,8 +16,6 @@ import logging
 
 
 class FlightsAdapter(FlightDataPort):
-    """Adapter for flight data - contains all infrastructure logic"""
-
     def __init__(self):
         settings = Settings()
         self.base_url = settings.BRUTM_BASE_URL
@@ -39,9 +37,6 @@ class FlightsAdapter(FlightDataPort):
     async def get_active_flights(
         self, area: QueryFlightsRequest
     ) -> Tuple[List[Flight], List[dict]]:
-        """Get active flights in the specified area - direct implementation"""
-
-        # Build query parameters for the area
         query_params = {
             "apikey": self.api_key,
             "lat1": str(area.north),
@@ -54,10 +49,8 @@ class FlightsAdapter(FlightDataPort):
             "lng4": str(area.west),
         }
 
-        # Query ISAs from DSS
         isas = await self._query_identification_service_areas(query_params)
 
-        # Get flights from each ISA
         flights: List[Flight] = []
         errors = []
 
@@ -80,7 +73,6 @@ class FlightsAdapter(FlightDataPort):
     async def _query_identification_service_areas(
         self, query_params: dict
     ) -> SearchIdentificationServiceAreasResponse:
-        """Query ISAs from DSS - moved from DSSRemoteIDService"""
         area = ",".join([
             query_params["lat1"],
             query_params["lng1"],

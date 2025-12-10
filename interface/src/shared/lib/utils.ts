@@ -4,6 +4,7 @@ import type {
   OperationalIntent,
   Constraint,
   IdentificationServiceAreaFull,
+  UTMZone,
 } from "@/shared/model"
 
 export function cn(...inputs: ClassValue[]) {
@@ -11,19 +12,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const isOperationalIntent = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
+  region: OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone,
 ): region is OperationalIntent => {
-  return "flight_type" in region.reference;
+  return "reference" in region && "flight_type" in region.reference;
 };
 
 export const isConstraint = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
+  region: OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone,
 ): region is Constraint => {
-  return "geozone" in region.details;
+  return "details" in region && "geozone" in region.details;
 };
 
 export const isIdentificationServiceArea = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
+  region: OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone,
 ): region is IdentificationServiceAreaFull => {
-  return "owner" in region.reference;
+  return "reference" in region && "owner" in region.reference;
+};
+
+export const isUTMZone = (
+  region: OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone,
+): region is UTMZone => {
+  return "name" in region;
 };
