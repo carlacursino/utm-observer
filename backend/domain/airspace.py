@@ -10,6 +10,7 @@ from domain.external.uss.common import OperationalIntent, Constraint
 from domain.external.dss.remoteid import (
     IdentificationServiceAreaFull,
 )
+from domain.utm_zone import UTMZone
 
 
 class AirspaceAllocations(BaseModel):
@@ -20,6 +21,7 @@ class AirspaceAllocations(BaseModel):
     constraints: List[Constraint] = []
     operational_intents: List[OperationalIntent] = []
     identification_service_areas: List[IdentificationServiceAreaFull] = []
+    utm_zones: List[UTMZone] = []
 
     @property
     def total_volumes(self) -> int:

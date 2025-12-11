@@ -13,7 +13,6 @@ class ConstraintManagementAdapter(ConstraintManagementPort):
     """Adapter for constraint management operations - direct implementation"""
 
     def __init__(self):
-        # Direct DSS client for constraint deletion
         settings = Settings()
 
         self.dss_client = AuthClient(

@@ -5,10 +5,9 @@ import {
   isConstraint,
   isIdentificationServiceArea,
   isOperationalIntent,
+  isUTMZone,
 } from "@/shared/lib";
-import {
-  useMap
-} from "@/shared/lib/map";
+import { useMap } from "@/shared/lib/map";
 
 export const OperationalFiltersPanel = () => {
   const { filters, setFilters, volumes } = useMap();
@@ -29,6 +28,8 @@ export const OperationalFiltersPanel = () => {
         return isConstraint(volume);
       } else if (filterId === "identification-service-areas") {
         return isIdentificationServiceArea(volume);
+      } else if (filterId === "utm-zones") {
+        return isUTMZone(volume);
       }
       return false;
     }).length;

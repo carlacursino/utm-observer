@@ -9,34 +9,27 @@ import type {
   Rectangle,
   Volume4D,
   Flight,
+  UTMZone,
 } from "@/shared/model";
 import { MapState } from "@/shared/model";
 import { MapEntityManager } from "./map-entity-manager";
+import { MapCameraManager } from "./map-camera-manager";
 import { useMap } from "@/shared/lib/map";
 import { FlightsService, AllocationsService } from "@/shared/api";
 import { toast } from "@/shared/lib/hook";
 import { formatEntityDetails } from "@/shared/lib/formatters";
+import {
+  isOperationalIntent,
+  isConstraint,
+  isIdentificationServiceArea,
+  isUTMZone,
+  getVolumeManager,
+  getVolumeId,
+  getVolumeTitle,
+} from "@/shared/lib";
 
 const VOLUME_FETCH_INTERVAL = 10000;
 const FLIGHT_FETCH_INTERVAL = 10000;
-
-export const isOperationalIntent = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
-): region is OperationalIntent => {
-  return "flight_type" in region.reference;
-};
-
-export const isConstraint = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
-): region is Constraint => {
-  return "geozone" in region.details;
-};
-
-export const isIdentificationServiceArea = (
-  region: OperationalIntent | Constraint | IdentificationServiceAreaFull,
-): region is IdentificationServiceAreaFull => {
-  return "owner" in region.reference;
-};
 
 export interface TimeRange {
   startTime: Date;
@@ -45,9 +38,12 @@ export interface TimeRange {
 
 export const MapDataService = () => {
   const controller = useRef<MapEntityManager | null>(null);
+  const cameraManager = useRef<MapCameraManager | null>(null);
 
   const localVolumes = useRef<
-    Array<OperationalIntent | Constraint | IdentificationServiceAreaFull>
+    Array<
+      OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
+    >
   >([]);
 
   const liveInterval = useRef<NodeJS.Timeout | null>(null);
@@ -74,6 +70,7 @@ export const MapDataService = () => {
     setFlights,
     flightsFilter,
     flightProvidersFilter,
+    is3D,
   } = useMap();
 
   const getTimeRange: () => TimeRange = () => {
@@ -96,7 +93,7 @@ export const MapDataService = () => {
       const res = await FlightsService.query(area);
       setFlights(res.flights);
       setMapState(MapState.ONLINE);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === "ERR_NETWORK") {
         setMapState(MapState.OFFLINE);
         toast({
@@ -161,17 +158,18 @@ export const MapDataService = () => {
       const res = await AllocationsService.query(boundingVolume);
 
       const fetchedVolumes: Array<
-        OperationalIntent | Constraint | IdentificationServiceAreaFull
+        OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
       > = [
           ...res.constraints,
           ...res.operational_intents,
           ...res.identification_service_areas,
+          ...res.utm_zones,
         ];
 
       localVolumes.current = fetchedVolumes.slice();
       setVolumes(fetchedVolumes);
       setMapState(MapState.ONLINE);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === "ERR_NETWORK") {
         setMapState(MapState.OFFLINE);
         toast({
@@ -191,12 +189,15 @@ export const MapDataService = () => {
 
   const getFilteredRegions = (
     regions: Array<
-      OperationalIntent | Constraint | IdentificationServiceAreaFull
+      OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
     >,
-  ): Array<OperationalIntent | Constraint | IdentificationServiceAreaFull> => {
+  ): Array<
+    OperationalIntent | Constraint | IdentificationServiceAreaFull | UTMZone
+  > => {
     const minutesOffset = selectedMinutes[0] || 0;
     return regions.filter((region) => {
-      const volumes = region.details.volumes;
+      const volumes =
+        "details" in region ? region.details.volumes : region.volumes;
 
       if (!volumes) {
         return false;
@@ -209,16 +210,16 @@ export const MapDataService = () => {
             !filterIds.includes("operational-intents")) ||
           (isConstraint(region) && !filterIds.includes("constraints")) ||
           (isIdentificationServiceArea(region) &&
-            !filterIds.includes("identification-service-areas"))
+            !filterIds.includes("identification-service-areas")) ||
+          (isUTMZone(region) && !filterIds.includes("utm-zones"))
         ) {
           return false;
         }
       }
 
-      const manager = isIdentificationServiceArea(region)
-        ? region.reference.owner
-        : region.reference.manager;
-      if (!managerFilter.includes(manager)) {
+      const manager = getVolumeManager(region);
+
+      if (manager && !managerFilter.includes(manager)) {
         return false;
       }
 
@@ -242,24 +243,24 @@ export const MapDataService = () => {
   };
 
   const triggerFetchVolumes = async () => {
-    if (!controller.current) return;
+    if (!controller.current || !cameraManager.current) return;
 
     setLoading(true);
-    const viewRectangle = controller.current.getViewRectangle();
+    const viewRectangle = cameraManager.current.getViewRectangle();
 
     const timeRange = getTimeRange();
 
     if (viewRectangle) {
-      await fetchVolumes(viewRectangle, timeRange);
+      await fetchVolumes(viewRectangle);
     }
     setLoading(false);
   };
 
   const triggerFetchFlights = async () => {
-    if (!controller.current) return;
+    if (!controller.current || !cameraManager.current) return;
 
     setLoading(true);
-    const viewRectangle = controller.current.getViewRectangle();
+    const viewRectangle = cameraManager.current.getViewRectangle();
     if (viewRectangle) {
       await fetchFlights(viewRectangle);
     }
@@ -272,15 +273,17 @@ export const MapDataService = () => {
     const filteredVolumes = getFilteredRegions(volumes);
     controller.current.displayRegions(filteredVolumes);
   };
-
   const onViewerStart: React.EffectCallback = () => {
     if (!viewer || controller.current) return;
 
-    controller.current = new MapEntityManager(viewer);
+    controller.current = new MapEntityManager(viewer as any);
+    cameraManager.current = new MapCameraManager(viewer as any);
+
+    cameraManager.current.setupInitialCamera();
 
     timeRange.current = getTimeRange();
 
-    controller.current.addMoveEndCallback(() => {
+    cameraManager.current.addMoveEndCallback(() => {
       if (constantVolumeFetch.current) {
         clearInterval(constantVolumeFetch.current);
       }
@@ -290,13 +293,26 @@ export const MapDataService = () => {
     });
 
     controller.current.addEntityClickCallback(
-      (pickedEntity: Cesium.Entity, regionId: string) => {
+      (pickedEntity: any, regionId: string) => {
         const volume = localVolumes.current.find(
-          (v) => v.reference.id === regionId,
+          (v) => getVolumeId(v) === regionId,
         );
 
         if (volume) {
-          pickedEntity.description = formatEntityDetails(volume);
+          pickedEntity.description = formatEntityDetails(volume as any);
+
+          // Yes, this is a hacky way to set the title of the info box
+          setTimeout(() => {
+            const q = document.querySelector(".cesium-infoBox-title");
+            if (q)
+              q.textContent = getVolumeTitle(
+                volume as
+                | Constraint
+                | OperationalIntent
+                | IdentificationServiceAreaFull
+                | UTMZone,
+              );
+          }, 1);
         }
       },
     );
@@ -402,6 +418,12 @@ export const MapDataService = () => {
   useEffect(onLiveToggle, [isLive]);
 
   useEffect(() => {
+    if (cameraManager.current) {
+      cameraManager.current.setMode(is3D);
+    }
+  }, [is3D]);
+
+  useEffect(() => {
     return () => {
       if (constantVolumeFetch.current) {
         clearInterval(constantVolumeFetch.current);
@@ -410,6 +432,7 @@ export const MapDataService = () => {
         clearInterval(liveInterval.current);
       }
       controller.current = null;
+      cameraManager.current = null;
     };
   }, []);
 

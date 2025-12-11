@@ -1,4 +1,3 @@
-import { Cartesian3 } from "cesium";
 import * as Cesium from "cesium";
 import { OperationalIntentStateColor } from "@/shared/model";
 import type {
@@ -6,22 +5,22 @@ import type {
   Constraint,
   IdentificationServiceAreaFull,
   Flight,
-  Rectangle,
   Volume3D,
   Volume4D,
+  UTMZone,
 } from "@/shared/model";
 import {
   isConstraint,
   isIdentificationServiceArea,
   isOperationalIntent,
+  isUTMZone,
+  getVolumeId,
+  getVolumeOvn,
+  getVolumeVolumes,
 } from "@/shared/lib";
 
 function sum(arr: number[]): number {
   return arr.reduce((acc, val) => acc + val, 0);
-}
-
-function radiansToDegrees(radians: number): number {
-  return radians * (180 / Math.PI);
 }
 
 type RegionId = string;
@@ -43,32 +42,9 @@ export class MapEntityManager {
 
     this.viewer.cesiumWidget.creditContainer.remove();
 
-    navigator.geolocation.getCurrentPosition(
-      (position: GeolocationPosition) => {
-        const { latitude, longitude, altitude } = position.coords;
-
-        const cameraAltitude = altitude ? altitude + 1000 : 2000;
-
-        this.viewer.camera.setView({
-          destination: Cartesian3.fromDegrees(
-            longitude,
-            latitude,
-            cameraAltitude,
-          ),
-          orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-45),
-            roll: 0,
-          },
-        });
-      },
-    );
+    this.viewer.cesiumWidget.creditContainer.remove();
 
     this.handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
-  }
-
-  addMoveEndCallback(callback: () => void) {
-    this.viewer.camera.moveEnd.addEventListener(callback);
   }
 
   addEntityClickCallback(
@@ -117,7 +93,7 @@ export class MapEntityManager {
 
     newFlights.forEach((newFlight) => {
       const { current_state, id } = newFlight;
-      const { position, operational_status } = current_state;
+      const { position } = current_state;
 
       if (!position || !position.lat || !position.lng) {
         return;
@@ -125,20 +101,24 @@ export class MapEntityManager {
 
       if (this.flights[id]) {
         const entity = this.flights[id][0];
-        entity.position = Cesium.Cartesian3.fromDegrees(
-          position.lng,
-          position.lat,
-          position.alt,
-          Cesium.Ellipsoid.WGS84,
+        entity.position = new Cesium.ConstantPositionProperty(
+          Cesium.Cartesian3.fromDegrees(
+            position.lng,
+            position.lat,
+            position.alt,
+            Cesium.Ellipsoid.WGS84,
+          ),
         );
 
         if (this.flights[id].length > 1) {
           const label = this.flights[id][1];
-          label.position = Cesium.Cartesian3.fromDegrees(
-            position.lng,
-            position.lat,
-            position.alt + 10,
-            Cesium.Ellipsoid.WGS84,
+          label.position = new Cesium.ConstantPositionProperty(
+            Cesium.Cartesian3.fromDegrees(
+              position.lng,
+              position.lat,
+              position.alt + 10,
+              Cesium.Ellipsoid.WGS84,
+            ),
           );
         }
       } else {
@@ -201,7 +181,7 @@ export class MapEntityManager {
 
   displayRegions(
     regions: Array<
-      Constraint | OperationalIntent | IdentificationServiceAreaFull
+      Constraint | OperationalIntent | IdentificationServiceAreaFull | UTMZone
     >,
   ) {
     if (
@@ -218,7 +198,12 @@ export class MapEntityManager {
     }
 
     Object.keys(this.displayedEntities).forEach((regionId) => {
-      if (!regions.some((region) => region.reference.id === regionId)) {
+      if (
+        !regions.some(
+          (region) =>
+            (isUTMZone(region) ? region.id : region.reference.id) === regionId,
+        )
+      ) {
         this.displayedEntities[regionId].entityIds.forEach((entityId) => {
           this.viewer.entities.removeById(entityId);
         });
@@ -227,52 +212,54 @@ export class MapEntityManager {
     });
 
     regions.forEach((region) => {
-      const { reference, details } = region;
-      const { volumes }: { volumes: Volume4D[] } = details;
+      let volumes = getVolumeVolumes(region);
+      let regionId = getVolumeId(region);
+      let ovn = getVolumeOvn(region);
+
+      if (!regionId) {
+        return;
+      }
 
       if (!volumes || volumes.length === 0) {
         return;
       }
 
-      if (!("id" in reference)) {
-        return;
-      }
-
-      const ovn = "ovn" in reference ? reference!.ovn : "";
-
       if (
-        reference.id in this.displayedEntities &&
-        this.displayedEntities[reference.id].ovn === ovn
+        regionId in this.displayedEntities &&
+        this.displayedEntities[regionId].ovn === ovn
       ) {
         return;
       }
 
-      if (!(reference.id in this.displayedEntities)) {
-        this.displayedEntities[reference.id] = {
+      if (!(regionId in this.displayedEntities)) {
+        this.displayedEntities[regionId] = {
           ovn: ovn!,
           entityIds: [],
         };
       }
 
       if (
-        reference.id in this.displayedEntities &&
-        this.displayedEntities[reference.id].ovn !== ovn
+        regionId in this.displayedEntities &&
+        this.displayedEntities[regionId].ovn !== ovn
       ) {
-        this.displayedEntities[reference.id].entityIds.forEach((entityId) => {
+        this.displayedEntities[regionId].entityIds.forEach((entityId) => {
           this.viewer.entities.removeById(entityId);
         });
-        this.displayedEntities[reference.id].entityIds = [];
-        this.displayedEntities[reference.id].ovn = ovn!;
+        this.displayedEntities[regionId].entityIds = [];
+        this.displayedEntities[regionId].ovn = ovn!;
       }
 
       for (const volume of volumes) {
         let color: Cesium.Color = Cesium.Color.GREY;
         if (isOperationalIntent(region)) {
-          color = OperationalIntentStateColor[reference["state"]];
+          color =
+            OperationalIntentStateColor[(region.reference as any)["state"]];
         } else if (isConstraint(region)) {
           color = Cesium.Color.RED;
         } else if (isIdentificationServiceArea(region)) {
           color = Cesium.Color.BLUE;
+        } else if (isUTMZone(region)) {
+          color = Cesium.Color.fromCssColorString("#E6E6FA").withAlpha(0.8);
         }
 
         if (
@@ -282,7 +269,7 @@ export class MapEntityManager {
           const entity = this.drawCylinder(volume.volume, color);
 
           if (entity) {
-            this.displayedEntities[reference.id].entityIds.push(entity.id);
+            this.displayedEntities[regionId].entityIds.push(entity.id);
           }
         } else if (
           "outline_polygon" in volume.volume &&
@@ -291,29 +278,12 @@ export class MapEntityManager {
           const entity = this.drawPolygon(volume.volume, color);
 
           if (entity) {
-            this.displayedEntities[reference.id].entityIds.push(entity.id);
+            this.displayedEntities[regionId].entityIds.push(entity.id);
           }
         }
       }
     });
   }
-
-  getViewRectangle = (): Rectangle | undefined => {
-    const rect = this.viewer.camera.computeViewRectangle();
-
-    if (!rect) {
-      return;
-    }
-
-    const ret: Rectangle = {
-      north: radiansToDegrees(rect.north),
-      east: radiansToDegrees(rect.east),
-      south: radiansToDegrees(rect.south),
-      west: radiansToDegrees(rect.west),
-    };
-
-    return ret;
-  };
 
   private drawCylinder(
     volume: Volume3D,
@@ -351,7 +321,7 @@ export class MapEntityManager {
     volume: Volume3D,
     color: Cesium.Color = Cesium.Color.GREY,
   ): Cesium.Entity | undefined {
-    if (!("outline_polygon" in volume)) {
+    if (!("outline_polygon" in volume) || !volume.outline_polygon) {
       return;
     }
 

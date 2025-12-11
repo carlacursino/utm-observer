@@ -1,6 +1,18 @@
 import { format } from "date-fns";
-import type { Constraint, OperationalIntent, Volume4D } from "@/shared/model";
+import type {
+  Constraint,
+  OperationalIntent,
+  UTMZone,
+  IdentificationServiceAreaFull,
+  Volume4D,
+} from "@/shared/model";
 import { OperationalIntentStateColor } from "@/shared/model";
+import {
+  isOperationalIntent,
+  isConstraint,
+  isIdentificationServiceArea,
+  isUTMZone,
+} from "@/shared/lib";
 
 const formatTimestamp = (timestamp: string): string => {
   return format(new Date(timestamp), "dd/MM/yyyy HH:mm:ss");
@@ -80,6 +92,31 @@ export const formatConstraintDetails = (constraint: Constraint): string => {
   `;
 };
 
+const formatISADetails = (isa: IdentificationServiceAreaFull): string => {
+  const { reference, details } = isa;
+
+  return `
+    <div class="entity-details isa">
+      <h3 class="entity-header">Identification Service Area Details</h3>
+      <div class="entity-id"><strong>ID:</strong> ${reference.id}</div>
+      
+      <div class="entity-section">
+        <h4>Reference Information</h4>
+        <div class="entity-field"><strong>Owner:</strong> ${reference.owner}</div>
+        <div class="entity-field"><strong>Version:</strong> ${reference.version}</div>
+        <div class="entity-field"><strong>Time Start:</strong> <span class="time-range">${formatTimestamp(reference.time_start.value)}</span></div>
+        <div class="entity-field"><strong>Time End:</strong> <span class="time-range">${formatTimestamp(reference.time_end.value)}</span></div>
+        <div class="entity-field"><strong>USS Base URL:</strong> <a href="${reference.uss_base_url}" target="_blank">${reference.uss_base_url}</a></div>
+      </div>
+      
+      <div class="entity-section">
+        <h4>Volumes</h4>
+        ${getVolumeDetailsHtml(details.volumes)}
+      </div>
+    </div>
+  `;
+};
+
 export const formatOperationalIntentDetails = (
   intent: OperationalIntent,
 ): string => {
@@ -122,12 +159,42 @@ export const formatOperationalIntentDetails = (
   `;
 };
 
+const formatUTMZoneDetails = (zone: UTMZone): string => {
+  return `
+    <div class="entity-details utm-zone">
+      <h3 class="entity-header">UTM Zone Details</h3>
+      <div class="entity-id"><strong>ID:</strong> ${zone.id}</div>
+      
+      <div class="entity-section">
+        <h4>Manager Information</h4>
+        <div class="entity-field"><strong>Manager:</strong> ${zone.manager}</div>
+      </div>
+      
+      <div class="entity-section">
+        <h4>Zone Information</h4>
+        <div class="entity-field"><strong>Name:</strong> ${zone.name}</div>
+      </div>
+
+      <div class="entity-section">
+        <h4>Volumes</h4>
+        ${getVolumeDetailsHtml(zone.volumes)}
+      </div>
+    </div>
+  `;
+};
+
 export const formatEntityDetails = (
   entity: Constraint | OperationalIntent,
 ): string => {
-  if ("flight_type" in entity.reference) {
+  if (isOperationalIntent(entity)) {
     return formatOperationalIntentDetails(entity as OperationalIntent);
-  } else {
+  } else if (isConstraint(entity)) {
     return formatConstraintDetails(entity as Constraint);
+  } else if (isUTMZone(entity)) {
+    return formatUTMZoneDetails(entity);
+  } else if (isIdentificationServiceArea(entity)) {
+    return formatISADetails(entity);
   }
+
+  return "<div class='no-data'>No details available for this volume type.</div>";
 };

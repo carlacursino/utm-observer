@@ -1,11 +1,19 @@
-import { Wifi, WifiOff, AlertCircle, Loader2, Radio } from "lucide-react";
+import {
+  Wifi,
+  WifiOff,
+  AlertCircle,
+  Loader2,
+  Radio,
+  Globe,
+  Map,
+} from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import IconBRUTM from "@/shared/assets/logo.svg";
 import { useMap } from "@/shared/lib/map";
 import { MapState } from "@/shared/model";
 
 export const Header = () => {
-  const { loading, mapState, isLive, setIsLive } = useMap();
+  const { loading, mapState, isLive, setIsLive, is3D, setIs3D } = useMap();
 
   const getConnectionIcon = () => {
     switch (mapState) {
@@ -59,9 +67,9 @@ export const Header = () => {
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center">
         {/* System Status */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <div className="flex items-center space-x-1">
             {getConnectionIcon()}
             <span className="text-sm text-gray-300 ml-4">
@@ -69,6 +77,26 @@ export const Header = () => {
             </span>
           </div>
         </div>
+
+        {/* 2D/3D Toggle */}
+        <Button
+          variant="ghost"
+          onClick={() => setIs3D(!is3D)}
+          className="flex items-center ml-4"
+        >
+          {is3D ? (
+            <Globe
+              className={`h-4 w-4 ${is3D ? "text-blue-500" : "text-gray-400"}`}
+            />
+          ) : (
+            <Map
+              className={`h-4 w-4 ${!is3D ? "text-blue-500" : "text-gray-400"}`}
+            />
+          )}
+          <span className="text-sm font-normal text-gray-300 hover:text-gray-100">
+            {is3D ? "3D" : "2D"}
+          </span>
+        </Button>
 
         {/* Live Button */}
         <Button
