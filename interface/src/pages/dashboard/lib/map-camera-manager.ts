@@ -39,11 +39,13 @@ export class MapCameraManager {
         this.viewer.camera.moveEnd.addEventListener(callback);
     }
 
+    private lastValidViewRectangle: Rectangle | undefined;
+
     getViewRectangle = (): Rectangle | undefined => {
         const rect = this.viewer.camera.computeViewRectangle();
 
         if (!rect) {
-            return;
+            return this.lastValidViewRectangle;
         }
 
         const ret: Rectangle = {
@@ -53,6 +55,17 @@ export class MapCameraManager {
             west: radiansToDegrees(rect.west),
         };
 
+        const latSpan = Math.abs(ret.north - ret.south);
+        const lngSpan = Math.abs(ret.east - ret.west);
+
+        console.log("Lat Span:", latSpan);
+        console.log("Lng Span:", lngSpan);
+
+        if (latSpan > 0.05 || lngSpan > 0.05) {
+            return this.lastValidViewRectangle;
+        }
+
+        this.lastValidViewRectangle = ret;
         return ret;
     };
 
