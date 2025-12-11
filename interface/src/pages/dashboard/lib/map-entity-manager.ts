@@ -191,10 +191,14 @@ export class MapEntityManager {
           (entity) => entity.entityIds.length,
         ),
       ) +
-      Object.values(this.flights).flat().length
+      Object.values(this.flights).flat().length +
+      (this.requestedAreaEntity ? 1 : 0)
     ) {
       this.viewer.entities.removeAll();
       this.displayedEntities = {};
+      if (this.requestedAreaEntity) {
+        this.viewer.entities.add(this.requestedAreaEntity);
+      }
     }
 
     Object.keys(this.displayedEntities).forEach((regionId) => {
@@ -353,5 +357,57 @@ export class MapEntityManager {
         outlineColor: color,
       },
     });
+  }
+
+  private requestedAreaEntity: Cesium.Entity | undefined;
+  private lastRequestedArea:
+    | {
+      north: number;
+      south: number;
+      east: number;
+      west: number;
+    }
+    | undefined;
+
+  displayRequestedArea(rectangle: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  }) {
+    if (
+      this.lastRequestedArea &&
+      this.lastRequestedArea.north === rectangle.north &&
+      this.lastRequestedArea.south === rectangle.south &&
+      this.lastRequestedArea.east === rectangle.east &&
+      this.lastRequestedArea.west === rectangle.west
+    ) {
+      return;
+    }
+
+    console.log("Displaying requested area");
+
+    if (this.requestedAreaEntity) {
+      this.viewer.entities.remove(this.requestedAreaEntity);
+    }
+
+    const positions = [
+      Cesium.Cartesian3.fromDegrees(rectangle.west, rectangle.north),
+      Cesium.Cartesian3.fromDegrees(rectangle.east, rectangle.north),
+      Cesium.Cartesian3.fromDegrees(rectangle.east, rectangle.south),
+      Cesium.Cartesian3.fromDegrees(rectangle.west, rectangle.south),
+      Cesium.Cartesian3.fromDegrees(rectangle.west, rectangle.north),
+    ];
+
+    this.requestedAreaEntity = this.viewer.entities.add({
+      polyline: {
+        positions: positions,
+        clampToGround: true,
+        width: 3,
+        material: Cesium.Color.GREEN.withAlpha(0.3),
+      },
+    });
+
+    this.lastRequestedArea = rectangle;
   }
 }
