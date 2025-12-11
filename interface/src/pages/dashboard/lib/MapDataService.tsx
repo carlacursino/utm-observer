@@ -251,6 +251,7 @@ export const MapDataService = () => {
     const timeRange = getTimeRange();
 
     if (viewRectangle) {
+      controller.current.displayRequestedArea(viewRectangle);
       await fetchVolumes(viewRectangle);
     }
     setLoading(false);
