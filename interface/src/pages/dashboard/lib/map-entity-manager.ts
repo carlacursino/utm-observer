@@ -17,6 +17,7 @@ import {
   getVolumeId,
   getVolumeOvn,
   getVolumeVolumes,
+  getRegionOffNominalVolumes,
 } from "@/shared/lib";
 
 function sum(arr: number[]): number {
@@ -202,12 +203,7 @@ export class MapEntityManager {
     }
 
     Object.keys(this.displayedEntities).forEach((regionId) => {
-      if (
-        !regions.some(
-          (region) =>
-            (isUTMZone(region) ? region.id : region.reference.id) === regionId,
-        )
-      ) {
+      if (!regions.some((region) => getVolumeId(region) === regionId)) {
         this.displayedEntities[regionId].entityIds.forEach((entityId) => {
           this.viewer.entities.removeById(entityId);
         });
@@ -217,6 +213,7 @@ export class MapEntityManager {
 
     regions.forEach((region) => {
       let volumes = getVolumeVolumes(region);
+      let offNominalVolumes = getRegionOffNominalVolumes(region);
       let regionId = getVolumeId(region);
       let ovn = getVolumeOvn(region);
 
@@ -224,7 +221,7 @@ export class MapEntityManager {
         return;
       }
 
-      if (!volumes || volumes.length === 0) {
+      if (volumes.length === 0 && offNominalVolumes.length === 0) {
         return;
       }
 
@@ -253,12 +250,52 @@ export class MapEntityManager {
         this.displayedEntities[regionId].ovn = ovn!;
       }
 
-      for (const volume of volumes) {
+      const volumesToDisplay: { volume: Volume4D; color: Cesium.Color }[] = [];
+
+      if (isOperationalIntent(region)) {
+        const state = (region.reference as any)["state"];
+
+        if (state === "Nonconforming") {
+          if (region.details.volumes) {
+            region.details.volumes.forEach((v) => {
+              volumesToDisplay.push({
+                volume: v,
+                color: OperationalIntentStateColor["Accepted"],
+              });
+            });
+          }
+
+          if (region.details.off_nominal_volumes) {
+            region.details.off_nominal_volumes.forEach((v) => {
+              volumesToDisplay.push({
+                volume: v,
+                color: OperationalIntentStateColor["Nonconforming"],
+              });
+            });
+          }
+        } else if (state === "Contingent") {
+          if (region.details.off_nominal_volumes) {
+            region.details.off_nominal_volumes.forEach((v) => {
+              volumesToDisplay.push({
+                volume: v,
+                color: OperationalIntentStateColor["Contingent"],
+              });
+            });
+          }
+        } else {
+          const color = OperationalIntentStateColor[state] || Cesium.Color.GREY;
+          if (region.details.volumes) {
+            region.details.volumes.forEach((v) => {
+              volumesToDisplay.push({ volume: v, color: color });
+            });
+          }
+        }
+      } else {
+        // Handle other region types (Constraint, ISA, UTMZone)
+        let volumes = getVolumeVolumes(region);
         let color: Cesium.Color = Cesium.Color.GREY;
-        if (isOperationalIntent(region)) {
-          color =
-            OperationalIntentStateColor[(region.reference as any)["state"]];
-        } else if (isConstraint(region)) {
+
+        if (isConstraint(region)) {
           color = Cesium.Color.RED;
         } else if (isIdentificationServiceArea(region)) {
           color = Cesium.Color.BLUE;
@@ -266,6 +303,12 @@ export class MapEntityManager {
           color = Cesium.Color.fromCssColorString("#E6E6FA").withAlpha(0.8);
         }
 
+        volumes.forEach((v) => {
+          volumesToDisplay.push({ volume: v, color: color });
+        });
+      }
+
+      for (const { volume, color } of volumesToDisplay) {
         if (
           "outline_circle" in volume.volume &&
           volume.volume["outline_circle"]

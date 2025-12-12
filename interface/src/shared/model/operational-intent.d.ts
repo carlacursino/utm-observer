@@ -24,12 +24,14 @@ export type OperationalIntentState =
   | "Accepted"
   | "Activated"
   | "Nonconforming"
+  | "Contingent"
   | "Deleted";
 
 export const OperationalIntentStateColor: Record<string, Cesium.Color> = {
   Accepted: Cesium.Color.YELLOW,
   Activated: Cesium.Color.GREEN,
   Nonconforming: Cesium.Color.ORANGE,
+  Contingent: Cesium.Color.ORANGERED,
   Deleted: Cesium.Color.RED,
 };
 export type Priority = number;

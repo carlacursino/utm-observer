@@ -108,6 +108,18 @@ export function getVolumeVolumes(
   return [];
 }
 
+export function getRegionOffNominalVolumes(
+  volume:
+    | OperationalIntent
+    | Constraint
+    | UTMZone
+    | IdentificationServiceAreaFull,
+): Volume4D[] {
+  if (isOperationalIntent(volume))
+    return volume.details.off_nominal_volumes || [];
+  return [];
+}
+
 export function getVolumeTitle(
   volume:
     | OperationalIntent
