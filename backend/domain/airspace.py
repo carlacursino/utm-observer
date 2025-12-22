@@ -1,0 +1,39 @@
+# Domain entities - core business objects
+from typing import List
+from domain.flights import Flight
+from pydantic import BaseModel
+from datetime import datetime
+
+from domain.base import Volume4D
+
+from domain.external.uss.common import OperationalIntent, Constraint
+from domain.external.dss.remoteid import (
+    IdentificationServiceAreaFull,
+)
+from domain.utm_zone import UTMZone
+
+
+class AirspaceAllocations(BaseModel):
+    """Aggregated view of airspace at a point in time - pure domain entity"""
+
+    timestamp: datetime
+    area_of_interest: Volume4D
+    constraints: List[Constraint] = []
+    operational_intents: List[OperationalIntent] = []
+    identification_service_areas: List[IdentificationServiceAreaFull] = []
+    utm_zones: List[UTMZone] = []
+
+    @property
+    def total_volumes(self) -> int:
+        return (
+            len(self.constraints)
+            + len(self.operational_intents)
+            + len(self.identification_service_areas)
+        )
+
+
+class AirspaceFlights(BaseModel):
+    """Active flights in the airspace at a point in time - pure domain entity"""
+
+    timestamp: datetime
+    flights: List[Flight] = []
